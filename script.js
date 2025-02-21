@@ -59,81 +59,88 @@ document.addEventListener('DOMContentLoaded', function() {
         convertBtn.disabled = false;
     }
 
-    function updateFileList() {
-        fileList.innerHTML = '';
-        files.forEach((fileObj, index) => {
-            const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
-            fileItem.innerHTML = `
-                <img src="${fileObj.preview}" alt="Preview">
-                <div class="file-info">
-                    <div>${fileObj.name}</div>
-                    <div>상태: 대기중</div>
-                </div>
-                <button class="remove-btn" data-index="${index}">제거</button>
-            `;
-            fileList.appendChild(fileItem);
-        });
+function updateFileList() {
+    fileList.innerHTML = '';
+    files.forEach((fileObj, index) => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        
+        // 파일 이름에서 특수문자 처리
+        const sanitizedFileName = decodeURIComponent(escape(fileObj.name));
+        
+        fileItem.innerHTML = `
+            <img src="${fileObj.preview}" alt="Preview">
+            <div class="file-info">
+                <div>${sanitizedFileName}</div>
+                <div>상태: 대기중</div>
+            </div>
+            <button class="remove-btn" data-index="${index}">제거</button>
+        `;
+        fileList.appendChild(fileItem);
+    });
 
-        // 제거 버튼 이벤트 리스너
-        document.querySelectorAll('.remove-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.dataset.index);
-                files.splice(index, 1);
-                updateFileList();
-                if (files.length === 0) {
-                    convertBtn.disabled = true;
-                    downloadAllBtn.style.display = 'none';
-                }
-            });
+    // 제거 버튼 이벤트 리스너
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            files.splice(index, 1);
+            updateFileList();
+            if (files.length === 0) {
+                convertBtn.disabled = true;
+                downloadAllBtn.style.display = 'none';
+            }
         });
+    });
+}
+
+convertBtn.addEventListener('click', async () => {
+    convertBtn.disabled = true;
+    const selectedFormat = outputFormat.value;
+    const qualityValue = quality.value / 100;
+    const convertedFiles = [];
+
+    for (let i = 0; i < files.length; i++) {
+        const fileObj = files[i];
+        const fileItem = fileList.children[i];
+        const statusDiv = fileItem.querySelector('.file-info div:last-child');
+        
+        try {
+            statusDiv.textContent = '상태: 변환 중...';
+            const convertedBlob = await convertImage(fileObj.preview, selectedFormat, qualityValue);
+            // 파일 이름 인코딩 처리
+            const originalName = decodeURIComponent(escape(fileObj.name));
+            const extension = selectedFormat.split('/')[1];
+            const newFileName = originalName.replace(/\.[^/.]+$/, '') + '.' + extension;
+            
+            convertedFiles.push({
+                blob: convertedBlob,
+                fileName: newFileName
+            });
+            
+            statusDiv.textContent = '상태: 변환 완료';
+            fileItem.style.backgroundColor = '#e8f5e9';
+        } catch (error) {
+            statusDiv.textContent = '상태: 변환 실패';
+            fileItem.style.backgroundColor = '#ffebee';
+            console.error('변환 오류:', error);
+        }
     }
 
-    convertBtn.addEventListener('click', async () => {
-        convertBtn.disabled = true;
-        const selectedFormat = outputFormat.value;
-        const qualityValue = quality.value / 100;
-        const convertedFiles = [];
+    if (convertedFiles.length > 0) {
+        downloadAllBtn.style.display = 'block';
+        downloadAllBtn.onclick = () => {
+            convertedFiles.forEach(file => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(file.blob);
+                link.download = file.fileName;
+                link.click();
+            });
+        };
+    }
+    
+    convertBtn.disabled = false;
+});
 
-        for (let i = 0; i < files.length; i++) {
-            const fileObj = files[i];
-            const fileItem = fileList.children[i];
-            const statusDiv = fileItem.querySelector('.file-info div:last-child');
-            
-            try {
-                statusDiv.textContent = '상태: 변환 중...';
-                const convertedBlob = await convertImage(fileObj.preview, selectedFormat, qualityValue);
-                const extension = selectedFormat.split('/')[1];
-                const newFileName = fileObj.name.replace(/\.[^/.]+$/, '') + '.' + extension;
-                
-                convertedFiles.push({
-                    blob: convertedBlob,
-                    fileName: newFileName
-                });
-                
-                statusDiv.textContent = '상태: 변환 완료';
-                fileItem.style.backgroundColor = '#e8f5e9';
-            } catch (error) {
-                statusDiv.textContent = '상태: 변환 실패';
-                fileItem.style.backgroundColor = '#ffebee';
-                console.error('변환 오류:', error);
-            }
-        }
-
-        if (convertedFiles.length > 0) {
-            downloadAllBtn.style.display = 'block';
-            downloadAllBtn.onclick = () => {
-                convertedFiles.forEach(file => {
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(file.blob);
-                    link.download = file.fileName;
-                    link.click();
-                });
-            };
-        }
-        
-        convertBtn.disabled = false;
-    });
 
     async function convertImage(src, format, quality) {
         return new Promise((resolve, reject) => {
