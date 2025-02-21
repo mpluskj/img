@@ -114,6 +114,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const qualityValue = quality.value / 100;
         const convertedFiles = [];
 
+        // 파일 확장자 매핑 추가
+        const formatExtensions = {
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/webp': 'webp',
+            'image/gif': 'gif'
+        };
+
         for (let i = 0; i < files.length; i++) {
             const fileObj = files[i];
             const fileItem = fileList.children[i];
@@ -122,7 +130,8 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 statusDiv.textContent = '상태: 변환 중...';
                 const convertedBlob = await convertImage(fileObj.preview, selectedFormat, qualityValue);
-                const extension = selectedFormat.split('/')[1];
+                // 확장자 매핑 사용
+                const extension = formatExtensions[selectedFormat] || selectedFormat.split('/')[1];
                 const newFileName = fileObj.name.replace(/\.[^/.]+$/, '') + '.' + extension;
                 
                 convertedFiles.push({
