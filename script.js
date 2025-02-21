@@ -10,12 +10,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let files = [];
 
-    // Ç°Áú ½½¶óÀÌ´õ ÀÌº¥Æ®
     quality.addEventListener('input', (e) => {
         qualityValue.textContent = e.target.value;
     });
 
-    // µå·¡±× ¾Ø µå·Ó ÀÌº¥Æ®
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropZone.style.backgroundColor = '#f0f0f0';
@@ -59,88 +57,102 @@ document.addEventListener('DOMContentLoaded', function() {
         convertBtn.disabled = false;
     }
 
-function updateFileList() {
-    fileList.innerHTML = '';
-    files.forEach((fileObj, index) => {
-        const fileItem = document.createElement('div');
-        fileItem.className = 'file-item';
-        
-        // ÆÄÀÏ ÀÌ¸§¿¡¼­ Æ¯¼ö¹®ÀÚ Ã³¸®
-        const sanitizedFileName = decodeURIComponent(escape(fileObj.name));
-        
-        fileItem.innerHTML = `
-            <img src="${fileObj.preview}" alt="Preview">
-            <div class="file-info">
-                <div>${sanitizedFileName}</div>
-                <div>»óÅÂ: ´ë±âÁß</div>
-            </div>
-            <button class="remove-btn" data-index="${index}">Á¦°Å</button>
-        `;
-        fileList.appendChild(fileItem);
-    });
-
-    // Á¦°Å ¹öÆ° ÀÌº¥Æ® ¸®½º³Ê
-    document.querySelectorAll('.remove-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const index = parseInt(e.target.dataset.index);
-            files.splice(index, 1);
-            updateFileList();
-            if (files.length === 0) {
-                convertBtn.disabled = true;
-                downloadAllBtn.style.display = 'none';
-            }
+    function updateFileList() {
+        fileList.innerHTML = '';
+        files.forEach((fileObj, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            
+            const thumbnail = document.createElement('img');
+            thumbnail.src = fileObj.preview;
+            thumbnail.alt = "Preview";
+            thumbnail.style.width = '50px';
+            thumbnail.style.height = '50px';
+            thumbnail.style.objectFit = 'cover';
+            
+            const fileInfo = document.createElement('div');
+            fileInfo.className = 'file-info';
+            
+            const fileName = document.createElement('div');
+            fileName.textContent = fileObj.name;
+            fileName.style.fontFamily = 'Arial, "ë§‘ì€ ê³ ë”•", sans-serif';
+            
+            const status = document.createElement('div');
+            status.textContent = 'ìƒíƒœ: ëŒ€ê¸°ì¤‘';
+            
+            const removeButton = document.createElement('button');
+            removeButton.className = 'remove-btn';
+            removeButton.textContent = 'ì œê±°';
+            removeButton.setAttribute('data-index', index);
+            
+            fileInfo.appendChild(fileName);
+            fileInfo.appendChild(status);
+            
+            fileItem.appendChild(thumbnail);
+            fileItem.appendChild(fileInfo);
+            fileItem.appendChild(removeButton);
+            
+            fileList.appendChild(fileItem);
         });
-    });
-}
 
-convertBtn.addEventListener('click', async () => {
-    convertBtn.disabled = true;
-    const selectedFormat = outputFormat.value;
-    const qualityValue = quality.value / 100;
-    const convertedFiles = [];
-
-    for (let i = 0; i < files.length; i++) {
-        const fileObj = files[i];
-        const fileItem = fileList.children[i];
-        const statusDiv = fileItem.querySelector('.file-info div:last-child');
-        
-        try {
-            statusDiv.textContent = '»óÅÂ: º¯È¯ Áß...';
-            const convertedBlob = await convertImage(fileObj.preview, selectedFormat, qualityValue);
-            // ÆÄÀÏ ÀÌ¸§ ÀÎÄÚµù Ã³¸®
-            const originalName = decodeURIComponent(escape(fileObj.name));
-            const extension = selectedFormat.split('/')[1];
-            const newFileName = originalName.replace(/\.[^/.]+$/, '') + '.' + extension;
-            
-            convertedFiles.push({
-                blob: convertedBlob,
-                fileName: newFileName
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                files.splice(index, 1);
+                updateFileList();
+                if (files.length === 0) {
+                    convertBtn.disabled = true;
+                    downloadAllBtn.style.display = 'none';
+                }
             });
+        });
+    }
+
+    convertBtn.addEventListener('click', async () => {
+        convertBtn.disabled = true;
+        const selectedFormat = outputFormat.value;
+        const qualityValue = quality.value / 100;
+        const convertedFiles = [];
+
+        for (let i = 0; i < files.length; i++) {
+            const fileObj = files[i];
+            const fileItem = fileList.children[i];
+            const statusDiv = fileItem.querySelector('.file-info div:last-child');
             
-            statusDiv.textContent = '»óÅÂ: º¯È¯ ¿Ï·á';
-            fileItem.style.backgroundColor = '#e8f5e9';
-        } catch (error) {
-            statusDiv.textContent = '»óÅÂ: º¯È¯ ½ÇÆĞ';
-            fileItem.style.backgroundColor = '#ffebee';
-            console.error('º¯È¯ ¿À·ù:', error);
+            try {
+                statusDiv.textContent = 'ìƒíƒœ: ë³€í™˜ ì¤‘...';
+                const convertedBlob = await convertImage(fileObj.preview, selectedFormat, qualityValue);
+                const extension = selectedFormat.split('/')[1];
+                const newFileName = fileObj.name.replace(/\.[^/.]+$/, '') + '.' + extension;
+                
+                convertedFiles.push({
+                    blob: convertedBlob,
+                    fileName: newFileName
+                });
+                
+                statusDiv.textContent = 'ìƒíƒœ: ë³€í™˜ ì™„ë£Œ';
+                fileItem.style.backgroundColor = '#e8f5e9';
+            } catch (error) {
+                statusDiv.textContent = 'ìƒíƒœ: ë³€í™˜ ì‹¤íŒ¨';
+                fileItem.style.backgroundColor = '#ffebee';
+                console.error('ë³€í™˜ ì˜¤ë¥˜:', error);
+            }
         }
-    }
 
-    if (convertedFiles.length > 0) {
-        downloadAllBtn.style.display = 'block';
-        downloadAllBtn.onclick = () => {
-            convertedFiles.forEach(file => {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(file.blob);
-                link.download = file.fileName;
-                link.click();
-            });
-        };
-    }
-    
-    convertBtn.disabled = false;
-});
-
+        if (convertedFiles.length > 0) {
+            downloadAllBtn.style.display = 'block';
+            downloadAllBtn.onclick = () => {
+                convertedFiles.forEach(file => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(file.blob);
+                    link.download = file.fileName;
+                    link.click();
+                });
+            };
+        }
+        
+        convertBtn.disabled = false;
+    });
 
     async function convertImage(src, format, quality) {
         return new Promise((resolve, reject) => {
@@ -157,14 +169,14 @@ convertBtn.addEventListener('click', async () => {
                         if (blob) {
                             resolve(blob);
                         } else {
-                            reject(new Error('ÀÌ¹ÌÁö º¯È¯ ½ÇÆĞ'));
+                            reject(new Error('ì´ë¯¸ì§€ ë³€í™˜ ì‹¤íŒ¨'));
                         }
                     },
                     format,
                     quality
                 );
             };
-            img.onerror = () => reject(new Error('ÀÌ¹ÌÁö ·Îµå ½ÇÆĞ'));
+            img.onerror = () => reject(new Error('ì´ë¯¸ì§€ ë¡œë“œ ì‹¤íŒ¨'));
             img.src = src;
         });
     }
