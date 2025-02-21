@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지 포맷 변환기</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>이미지 포맷 변환기</h1>
+        <div class="format-selector">
+            <label for="outputFormat">변환할 포맷 선택:</label>
+            <select id="outputFormat">
+                <option value="image/jpeg">JPG</option>
+                <option value="image/png">PNG</option>
+                <option value="image/webp">WebP</option>
+                <option value="image/gif">GIF</option>
+            </select>
+            <div class="quality-control">
+                <label for="quality">품질 설정 (1-100):</label>
+                <input type="range" id="quality" min="1" max="100" value="90">
+                <span id="qualityValue">90</span>
+            </div>
+        </div>
+        
+        <div class="upload-area" id="dropZone">
+            <p>이미지를 드래그하거나 클릭하여 업로드하세요</p>
+            <p class="sub-text">지원 포맷: JPG, PNG, WebP, GIF, BMP</p>
+            <input type="file" id="fileInput" accept="image/*" multiple hidden>
+        </div>
+        
+        <div id="fileList" class="file-list"></div>
+        <button id="convertBtn" disabled>선택한 파일 변환하기</button>
+        <button id="downloadAllBtn" style="display: none;">모든 파일 다운로드</button>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
