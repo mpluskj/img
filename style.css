@@ -2,7 +2,6 @@
     max-width: 1000px;
     margin: 0 auto;
     padding: 20px;
-    font-family: Arial, "맑은 고딕", sans-serif;
 }
 
 .format-selector {
@@ -53,35 +52,19 @@
     height: 50px;
     object-fit: cover;
     margin-right: 10px;
-    border-radius: 4px;
 }
 
-.file-info {
+.file-item .file-info {
     flex-grow: 1;
-    margin-right: 10px;
 }
 
-.file-info div:first-child {
-    font-weight: bold;
-    margin-bottom: 4px;
-}
-
-.file-info div:last-child {
-    font-size: 0.9em;
-    color: #666;
-}
-
-.remove-btn {
+.file-item .remove-btn {
     padding: 5px 10px;
     background-color: #ff4444;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-}
-
-.remove-btn:hover {
-    background-color: #ff0000;
 }
 
 button {
