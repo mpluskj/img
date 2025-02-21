@@ -10,12 +10,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let files = [];
 
-    // 품질 슬라이더 이벤트
     quality.addEventListener('input', (e) => {
         qualityValue.textContent = e.target.value;
     });
 
-    // 드래그 앤 드롭 이벤트
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropZone.style.backgroundColor = '#f0f0f0';
@@ -64,18 +62,39 @@ document.addEventListener('DOMContentLoaded', function() {
         files.forEach((fileObj, index) => {
             const fileItem = document.createElement('div');
             fileItem.className = 'file-item';
-            fileItem.innerHTML = `
-                <img src="${fileObj.preview}" alt="Preview">
-                <div class="file-info">
-                    <div>${fileObj.name}</div>
-                    <div>상태: 대기중</div>
-                </div>
-                <button class="remove-btn" data-index="${index}">제거</button>
-            `;
+            
+            const thumbnail = document.createElement('img');
+            thumbnail.src = fileObj.preview;
+            thumbnail.alt = "Preview";
+            thumbnail.style.width = '50px';
+            thumbnail.style.height = '50px';
+            thumbnail.style.objectFit = 'cover';
+            
+            const fileInfo = document.createElement('div');
+            fileInfo.className = 'file-info';
+            
+            const fileName = document.createElement('div');
+            fileName.textContent = fileObj.name;
+            fileName.style.fontFamily = 'Arial, "맑은 고딕", sans-serif';
+            
+            const status = document.createElement('div');
+            status.textContent = '상태: 대기중';
+            
+            const removeButton = document.createElement('button');
+            removeButton.className = 'remove-btn';
+            removeButton.textContent = '제거';
+            removeButton.setAttribute('data-index', index);
+            
+            fileInfo.appendChild(fileName);
+            fileInfo.appendChild(status);
+            
+            fileItem.appendChild(thumbnail);
+            fileItem.appendChild(fileInfo);
+            fileItem.appendChild(removeButton);
+            
             fileList.appendChild(fileItem);
         });
 
-        // 제거 버튼 이벤트 리스너
         document.querySelectorAll('.remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const index = parseInt(e.target.dataset.index);
