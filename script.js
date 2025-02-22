@@ -4,18 +4,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileList = document.getElementById('fileList');
     const convertBtn = document.getElementById('convertBtn');
     const downloadAllBtn = document.getElementById('downloadAllBtn');
+    const resetBtn = document.getElementById('resetBtn');
     const outputFormat = document.getElementById('outputFormat');
     const quality = document.getElementById('quality');
     const qualityValue = document.getElementById('qualityValue');
     
+    // 파일 크기 제한 상수 설정 (단위: bytes)
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    const MIN_FILE_SIZE = 1 * 1024; // 1KB
+    
     let files = [];
 
-    // 품질 설정 슬라이더 이벤트
     quality.addEventListener('input', (e) => {
         qualityValue.textContent = e.target.value;
     });
 
-    // 드래그 앤 드롭 이벤트
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropZone.style.transform = 'scale(1.02)';
@@ -43,41 +46,73 @@ document.addEventListener('DOMContentLoaded', function() {
         handleFiles(e.target.files);
     });
 
+    // 초기화 함수
+    function resetAll() {
+        files = [];
+        updateFileList();
+        downloadAllBtn.style.display = 'none';
+        resetBtn.style.display = 'none';
+        showNotification('모든 파일이 초기화되었습니다.', 'info');
+    }
+
+    // 초기화 버튼 이벤트 리스너
+    resetBtn.addEventListener('click', resetAll);
+
     function handleFiles(newFiles) {
-        // 파일 배열 초기화 (기존 파일 유지하면서 추가)
         if (!files) {
             files = [];
         }
 
-        // 파일 처리 약속(Promise) 배열 생성
         const filePromises = Array.from(newFiles).map(file => {
             return new Promise((resolve) => {
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const fileObj = {
-                            file: file,
-                            preview: e.target.result,
-                            name: file.name
-                        };
-                        resolve(fileObj);
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    showNotification('이미지 파일만 업로드 가능합니다.', 'error');
+                // 파일 크기 검증
+                if (file.size > MAX_FILE_SIZE) {
+                    showNotification(`${file.name}: 파일 크기가 20MB를 초과합니다.`, 'error');
                     resolve(null);
+                    return;
                 }
+
+                if (file.size < MIN_FILE_SIZE) {
+                    showNotification(`${file.name}: 파일 크기가 너무 작습니다. (최소 1KB)`, 'error');
+                    resolve(null);
+                    return;
+                }
+
+                if (!file.type.startsWith('image/')) {
+                    showNotification(`${file.name}: 이미지 파일만 업로드 가능합니다.`, 'error');
+                    resolve(null);
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const fileObj = {
+                        file: file,
+                        preview: e.target.result,
+                        name: file.name,
+                        size: file.size
+                    };
+                    resolve(fileObj);
+                };
+
+                reader.onerror = function() {
+                    showNotification(`${file.name}: 파일 읽기 실패`, 'error');
+                    resolve(null);
+                };
+
+                reader.readAsDataURL(file);
             });
         });
 
-        // 모든 파일 처리가 완료되면 실행
         Promise.all(filePromises).then(fileObjects => {
-            // null이 아닌 파일만 필터링하여 추가
             const validFiles = fileObjects.filter(obj => obj !== null);
             files = files.concat(validFiles);
             updateFileList();
-            // 파일이 있을 경우에만 변환 버튼 활성화
             convertBtn.disabled = files.length === 0;
+
+            if (validFiles.length > 0) {
+                showNotification(`${validFiles.length}개의 파일이 추가되었습니다.`, 'success');
+            }
         });
     }
 
@@ -86,6 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!files || files.length === 0) {
             convertBtn.disabled = true;
             downloadAllBtn.style.display = 'none';
+            resetBtn.style.display = 'none';
             return;
         }
 
@@ -101,21 +137,24 @@ document.addEventListener('DOMContentLoaded', function() {
             fileInfo.className = 'file-info';
             
             const fileName = document.createElement('div');
-            fileName.textContent = fileObj.name;
+            fileName.innerHTML = `
+                <span>${fileObj.name}</span>
+                <span class="file-size">(${formatFileSize(fileObj.size)})</span>
+            `;
             fileName.style.fontFamily = 'Noto Sans KR, sans-serif';
             
             const status = document.createElement('div');
             status.textContent = '상태: 대기중';
             status.className = 'status-waiting';
             
+            fileInfo.appendChild(fileName);
+            fileInfo.appendChild(status);
+            
             const removeButton = document.createElement('button');
             removeButton.className = 'remove-btn';
             removeButton.innerHTML = '<span class="btn-icon">🗑️</span>';
             removeButton.setAttribute('data-index', index);
             removeButton.title = '파일 제거';
-            
-            fileInfo.appendChild(fileName);
-            fileInfo.appendChild(status);
             
             fileItem.appendChild(thumbnail);
             fileItem.appendChild(fileInfo);
@@ -132,10 +171,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 50 * index);
         });
 
-        // 변환 버튼 상태 업데이트
-        convertBtn.disabled = files.length === 0;
-
-        // 제거 버튼 이벤트 리스너
         document.querySelectorAll('.remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const index = parseInt(e.target.closest('.remove-btn').dataset.index);
@@ -150,6 +185,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 300);
             });
         });
+
+        convertBtn.disabled = files.length === 0;
     }
 
     convertBtn.addEventListener('click', async () => {
@@ -158,12 +195,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const qualityValue = quality.value / 100;
         const convertedFiles = [];
 
-        // 파일 확장자 매핑
         const formatExtensions = {
             'image/jpeg': 'jpg',
             'image/png': 'png',
             'image/webp': 'webp',
             'image/gif': 'gif'
+        };
+
+        const formatDisplayNames = {
+            'image/jpeg': 'JPG',
+            'image/png': 'PNG',
+            'image/webp': 'WebP',
+            'image/gif': 'GIF'
         };
 
         for (let i = 0; i < files.length; i++) {
@@ -176,7 +219,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusDiv.className = 'status-converting';
                 
                 const convertedBlob = await convertImage(fileObj.preview, selectedFormat, qualityValue);
-                const extension = formatExtensions[selectedFormat] || selectedFormat.split('/')[1];
+                const extension = formatExtensions[selectedFormat];
+                const formatDisplayName = formatDisplayNames[selectedFormat];
                 const newFileName = fileObj.name.replace(/\.[^/.]+$/, '') + '.' + extension;
                 
                 convertedFiles.push({
@@ -184,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     fileName: newFileName
                 });
                 
-                statusDiv.textContent = '상태: 변환 완료';
+                statusDiv.textContent = `상태: ${formatDisplayName}로 변환 완료`;
                 statusDiv.className = 'status-success';
                 fileItem.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
             } catch (error) {
@@ -197,13 +241,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (convertedFiles.length > 0) {
             downloadAllBtn.style.display = 'block';
-            // 다운로드 버튼 애니메이션
-            downloadAllBtn.style.opacity = '0';
-            downloadAllBtn.style.transform = 'translateY(20px)';
-            setTimeout(() => {
-                downloadAllBtn.style.opacity = '1';
-                downloadAllBtn.style.transform = 'translateY(0)';
-            }, 100);
+            resetBtn.style.display = 'block';
+            
+            [downloadAllBtn, resetBtn].forEach(btn => {
+                btn.style.opacity = '0';
+                btn.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    btn.style.opacity = '1';
+                    btn.style.transform = 'translateY(0)';
+                }, 100);
+            });
             
             downloadAllBtn.onclick = () => {
                 convertedFiles.forEach((file, index) => {
@@ -212,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         link.href = URL.createObjectURL(file.blob);
                         link.download = file.fileName;
                         link.click();
-                    }, index * 100); // 순차적 다운로드
+                    }, index * 100);
                 });
                 showNotification('다운로드가 시작되었습니다.', 'success');
             };
@@ -248,7 +295,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 알림 표시 함수
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
     function showNotification(message, type = 'info') {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
@@ -256,13 +310,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.body.appendChild(notification);
         
-        // 애니메이션 효과
         setTimeout(() => {
             notification.style.opacity = '1';
             notification.style.transform = 'translateY(0)';
         }, 100);
         
-        // 3초 후 제거
         setTimeout(() => {
             notification.style.opacity = '0';
             notification.style.transform = 'translateY(-20px)';
@@ -270,7 +322,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
 
-    // 알림 스타일 추가
     const style = document.createElement('style');
     style.textContent = `
         .notification {
