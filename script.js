@@ -44,28 +44,51 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function handleFiles(newFiles) {
-        Array.from(newFiles).forEach(file => {
-            if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const fileObj = {
-                        file: file,
-                        preview: e.target.result,
-                        name: file.name
+        // 파일 배열 초기화 (기존 파일 유지하면서 추가)
+        if (!files) {
+            files = [];
+        }
+
+        // 파일 처리 약속(Promise) 배열 생성
+        const filePromises = Array.from(newFiles).map(file => {
+            return new Promise((resolve) => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const fileObj = {
+                            file: file,
+                            preview: e.target.result,
+                            name: file.name
+                        };
+                        resolve(fileObj);
                     };
-                    files.push(fileObj);
-                    updateFileList();
+                    reader.readAsDataURL(file);
+                } else {
+                    showNotification('이미지 파일만 업로드 가능합니다.', 'error');
+                    resolve(null);
                 }
-                reader.readAsDataURL(file);
-            } else {
-                showNotification('이미지 파일만 업로드 가능합니다.', 'error');
-            }
+            });
         });
-        convertBtn.disabled = files.length === 0;
+
+        // 모든 파일 처리가 완료되면 실행
+        Promise.all(filePromises).then(fileObjects => {
+            // null이 아닌 파일만 필터링하여 추가
+            const validFiles = fileObjects.filter(obj => obj !== null);
+            files = files.concat(validFiles);
+            updateFileList();
+            // 파일이 있을 경우에만 변환 버튼 활성화
+            convertBtn.disabled = files.length === 0;
+        });
     }
 
     function updateFileList() {
         fileList.innerHTML = '';
+        if (!files || files.length === 0) {
+            convertBtn.disabled = true;
+            downloadAllBtn.style.display = 'none';
+            return;
+        }
+
         files.forEach((fileObj, index) => {
             const fileItem = document.createElement('div');
             fileItem.className = 'file-item glass-effect';
@@ -98,35 +121,32 @@ document.addEventListener('DOMContentLoaded', function() {
             fileItem.appendChild(fileInfo);
             fileItem.appendChild(removeButton);
             
-            // 애니메이션 효과 추가
             fileItem.style.opacity = '0';
             fileItem.style.transform = 'translateY(20px)';
             
             fileList.appendChild(fileItem);
             
-            // 애니메이션 실행
             setTimeout(() => {
                 fileItem.style.opacity = '1';
                 fileItem.style.transform = 'translateY(0)';
             }, 50 * index);
         });
 
+        // 변환 버튼 상태 업데이트
+        convertBtn.disabled = files.length === 0;
+
+        // 제거 버튼 이벤트 리스너
         document.querySelectorAll('.remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const index = parseInt(e.target.closest('.remove-btn').dataset.index);
                 const fileItem = e.target.closest('.file-item');
                 
-                // 제거 애니메이션
                 fileItem.style.opacity = '0';
                 fileItem.style.transform = 'translateY(20px)';
                 
                 setTimeout(() => {
                     files.splice(index, 1);
                     updateFileList();
-                    if (files.length === 0) {
-                        convertBtn.disabled = true;
-                        downloadAllBtn.style.display = 'none';
-                    }
                 }, 300);
             });
         });
