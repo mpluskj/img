@@ -10,22 +10,27 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let files = [];
 
+    // 품질 설정 슬라이더 이벤트
     quality.addEventListener('input', (e) => {
         qualityValue.textContent = e.target.value;
     });
 
+    // 드래그 앤 드롭 이벤트
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
-        dropZone.style.backgroundColor = '#f0f0f0';
+        dropZone.style.transform = 'scale(1.02)';
+        dropZone.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
     });
 
     dropZone.addEventListener('dragleave', (e) => {
         e.preventDefault();
+        dropZone.style.transform = 'scale(1)';
         dropZone.style.backgroundColor = '';
     });
 
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
+        dropZone.style.transform = 'scale(1)';
         dropZone.style.backgroundColor = '';
         handleFiles(e.dataTransfer.files);
     });
@@ -52,38 +57,39 @@ document.addEventListener('DOMContentLoaded', function() {
                     updateFileList();
                 }
                 reader.readAsDataURL(file);
+            } else {
+                showNotification('이미지 파일만 업로드 가능합니다.', 'error');
             }
         });
-        convertBtn.disabled = false;
+        convertBtn.disabled = files.length === 0;
     }
 
     function updateFileList() {
         fileList.innerHTML = '';
         files.forEach((fileObj, index) => {
             const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
+            fileItem.className = 'file-item glass-effect';
             
             const thumbnail = document.createElement('img');
             thumbnail.src = fileObj.preview;
             thumbnail.alt = "Preview";
-            thumbnail.style.width = '50px';
-            thumbnail.style.height = '50px';
-            thumbnail.style.objectFit = 'cover';
             
             const fileInfo = document.createElement('div');
             fileInfo.className = 'file-info';
             
             const fileName = document.createElement('div');
             fileName.textContent = fileObj.name;
-            fileName.style.fontFamily = 'Arial, "맑은 고딕", sans-serif';
+            fileName.style.fontFamily = 'Noto Sans KR, sans-serif';
             
             const status = document.createElement('div');
             status.textContent = '상태: 대기중';
+            status.className = 'status-waiting';
             
             const removeButton = document.createElement('button');
             removeButton.className = 'remove-btn';
-            removeButton.textContent = '제거';
+            removeButton.innerHTML = '<span class="btn-icon">🗑️</span>';
             removeButton.setAttribute('data-index', index);
+            removeButton.title = '파일 제거';
             
             fileInfo.appendChild(fileName);
             fileInfo.appendChild(status);
@@ -92,18 +98,36 @@ document.addEventListener('DOMContentLoaded', function() {
             fileItem.appendChild(fileInfo);
             fileItem.appendChild(removeButton);
             
+            // 애니메이션 효과 추가
+            fileItem.style.opacity = '0';
+            fileItem.style.transform = 'translateY(20px)';
+            
             fileList.appendChild(fileItem);
+            
+            // 애니메이션 실행
+            setTimeout(() => {
+                fileItem.style.opacity = '1';
+                fileItem.style.transform = 'translateY(0)';
+            }, 50 * index);
         });
 
         document.querySelectorAll('.remove-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const index = parseInt(e.target.dataset.index);
-                files.splice(index, 1);
-                updateFileList();
-                if (files.length === 0) {
-                    convertBtn.disabled = true;
-                    downloadAllBtn.style.display = 'none';
-                }
+                const index = parseInt(e.target.closest('.remove-btn').dataset.index);
+                const fileItem = e.target.closest('.file-item');
+                
+                // 제거 애니메이션
+                fileItem.style.opacity = '0';
+                fileItem.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    files.splice(index, 1);
+                    updateFileList();
+                    if (files.length === 0) {
+                        convertBtn.disabled = true;
+                        downloadAllBtn.style.display = 'none';
+                    }
+                }, 300);
             });
         });
     }
@@ -114,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const qualityValue = quality.value / 100;
         const convertedFiles = [];
 
-        // 파일 확장자 매핑 추가
+        // 파일 확장자 매핑
         const formatExtensions = {
             'image/jpeg': 'jpg',
             'image/png': 'png',
@@ -129,8 +153,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             try {
                 statusDiv.textContent = '상태: 변환 중...';
+                statusDiv.className = 'status-converting';
+                
                 const convertedBlob = await convertImage(fileObj.preview, selectedFormat, qualityValue);
-                // 확장자 매핑 사용
                 const extension = formatExtensions[selectedFormat] || selectedFormat.split('/')[1];
                 const newFileName = fileObj.name.replace(/\.[^/.]+$/, '') + '.' + extension;
                 
@@ -140,23 +165,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 statusDiv.textContent = '상태: 변환 완료';
-                fileItem.style.backgroundColor = '#e8f5e9';
+                statusDiv.className = 'status-success';
+                fileItem.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
             } catch (error) {
                 statusDiv.textContent = '상태: 변환 실패';
-                fileItem.style.backgroundColor = '#ffebee';
+                statusDiv.className = 'status-error';
+                fileItem.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
                 console.error('변환 오류:', error);
             }
         }
 
         if (convertedFiles.length > 0) {
             downloadAllBtn.style.display = 'block';
+            // 다운로드 버튼 애니메이션
+            downloadAllBtn.style.opacity = '0';
+            downloadAllBtn.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                downloadAllBtn.style.opacity = '1';
+                downloadAllBtn.style.transform = 'translateY(0)';
+            }, 100);
+            
             downloadAllBtn.onclick = () => {
-                convertedFiles.forEach(file => {
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(file.blob);
-                    link.download = file.fileName;
-                    link.click();
+                convertedFiles.forEach((file, index) => {
+                    setTimeout(() => {
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(file.blob);
+                        link.download = file.fileName;
+                        link.click();
+                    }, index * 100); // 순차적 다운로드
                 });
+                showNotification('다운로드가 시작되었습니다.', 'success');
             };
         }
         
@@ -189,4 +227,56 @@ document.addEventListener('DOMContentLoaded', function() {
             img.src = src;
         });
     }
+
+    // 알림 표시 함수
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        // 애니메이션 효과
+        setTimeout(() => {
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateY(0)';
+        }, 100);
+        
+        // 3초 후 제거
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateY(-20px)';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+
+    // 알림 스타일 추가
+    const style = document.createElement('style');
+    style.textContent = `
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .notification.success {
+            background-color: var(--success-color);
+        }
+        
+        .notification.error {
+            background-color: var(--error-color);
+        }
+        
+        .notification.info {
+            background-color: var(--primary-color);
+        }
+    `;
+    document.head.appendChild(style);
 });

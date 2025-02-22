@@ -6,34 +6,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>이미지 포맷 변환기</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts 추가 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>이미지 포맷 변환기</h1>
-        <div class="format-selector">
-            <label for="outputFormat">변환할 포맷 선택:</label>
-               <select id="outputFormat">
-			       <option value="image/jpeg">JPG</option>
-			       <option value="image/png">PNG</option>
-			       <option value="image/webp">WebP</option>
-			       <option value="image/gif">GIF</option>
-			   </select>
+        <header class="header">
+            <h1>이미지 포맷 변환기</h1>
+            <p class="subtitle">고품질 이미지 변환 서비스</p>
+        </header>
+
+        <div class="format-selector glass-effect">
+            <div class="format-group">
+                <label for="outputFormat">변환할 포맷 선택</label>
+                <select id="outputFormat" class="styled-select">
+                    <option value="image/jpeg">JPG</option>
+                    <option value="image/png">PNG</option>
+                    <option value="image/webp">WebP</option>
+                    <option value="image/gif">GIF</option>
+                </select>
+            </div>
+            
             <div class="quality-control">
-                <label for="quality">품질 설정 (1-100):</label>
-                <input type="range" id="quality" min="1" max="100" value="90">
-                <span id="qualityValue">90</span>
+                <label for="quality">품질 설정</label>
+                <div class="quality-slider">
+                    <input type="range" id="quality" min="1" max="100" value="90">
+                    <span id="qualityValue">90</span>
+                </div>
             </div>
         </div>
         
-        <div class="upload-area" id="dropZone">
-            <p>이미지를 드래그하거나 클릭하여 업로드하세요</p>
+        <div class="upload-area glass-effect" id="dropZone">
+            <div class="upload-icon">📁</div>
+            <p class="upload-text">이미지를 드래그하거나 클릭하여 업로드하세요</p>
             <p class="sub-text">지원 포맷: JPG, PNG, WebP, GIF, BMP</p>
             <input type="file" id="fileInput" accept="image/*" multiple hidden>
         </div>
         
         <div id="fileList" class="file-list"></div>
-        <button id="convertBtn" disabled>선택한 파일 변환하기</button>
-        <button id="downloadAllBtn" style="display: none;">모든 파일 다운로드</button>
+        
+        <div class="button-group">
+            <button id="convertBtn" class="primary-btn" disabled>
+                <span class="btn-icon">🔄</span> 변환하기
+            </button>
+            <button id="downloadAllBtn" class="secondary-btn" style="display: none;">
+                <span class="btn-icon">⬇️</span> 모두 다운로드
+            </button>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
